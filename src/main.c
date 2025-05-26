@@ -12,6 +12,7 @@ void update_transaction_menu();
 void delete_transaction_menu();
 void budget_manipulation_menu();
 void financial_report_menu();
+int is_valid_date(int day, int month, int year);
 
 void show_all_transactions();
 void sort_transactions();
@@ -122,8 +123,22 @@ void add_transaction_menu() {
     Transaction transactions[MAX_TRANSACTIONS];
     int count = read_transactions("Data/transactions.csv", transactions, MAX_TRANSACTIONS);
 
-    printf("Enter the day/month/year: ");
-    scanf("%d %d %d", &t.date.day, &t.date.month, &t.date.year);
+    int valid = 0;
+    do {
+        printf("Enter the day/month/year: ");
+        if (scanf("%d/%d/%d", &t.date.day, &t.date.month, &t.date.year) != 3) {
+            clear_input_buffer();
+            printf("Invalid input. Please enter numbers for day, month, and year.\n");
+            continue;
+        }
+        clear_input_buffer();
+        if (!is_valid_date(t.date.day, t.date.month, t.date.year)) {
+            printf("Invalid date. Please enter a valid date.\n");
+        } else {
+            valid = 1;
+        }
+    } while (!valid);
+
     printf("Enter the amount transferred: ");
     scanf("%lf", &t.amount);
     getchar(); // consume newline
@@ -149,7 +164,6 @@ void add_transaction_menu() {
         if (!category_exists(t.category)) {
             printf("Category does not exist. Redirecting to create a new category...\n");
             create_new_category();
-            // DO NOT call clear_input_buffer() here!
         }
     } while (!category_exists(t.category));
 
@@ -186,13 +200,20 @@ void update_transaction_menu() {
         return;
     }
 
-    printf("Enter the day/month/year: ");
-    if (scanf("%d %d %d", &t->date.day, &t->date.month, &t->date.year) != 3) {
+    int valid = 0;
+    do {
+        printf("Enter the day/month/year: ");
+        if (scanf("%d/%d/%d", &t->date.day, &t->date.month, &t->date.year) != 3) {
+            printf("Invalid input. Please enter numbers for day, month, and year.\n");
+            continue;
+        }
         clear_input_buffer();
-        printf("Invalid input.\n");
-        return;
-    }
-    clear_input_buffer();
+        if (!is_valid_date(t->date.day, t->date.month, t->date.year)) {
+            printf("Invalid date. Please enter a valid date.\n");
+        } else {
+            valid = 1;
+        }
+    } while (!valid);
 
     printf("Enter the amount transferred: ");
     if (scanf("%lf", &t->amount) != 1) {
@@ -339,10 +360,9 @@ void financial_report_menu() {
     printf("Total Expenses:  %.2lf\n", total_expense);
     printf("Net Balance:     %.2lf\n", total_income + total_expense);
 
-    // Budget vs. Spending per category
-    printf("\nBudget vs. Spending by Category:\n");
+    // Budget vs. Spending per category (expenses only)
+    printf("\nBudget vs. Spending by Category (Expenses):\n");
 
-    // Read budgets
     #define MAX_BUDGETS 100
     #define CATEGORY_LEN 25
     typedef struct {
@@ -357,6 +377,11 @@ void financial_report_menu() {
         return;
     }
 
+    // Track income categories (positive total) not shown in budget section
+    char income_categories[MAX_BUDGETS][CATEGORY_LEN];
+    double income_amounts[MAX_BUDGETS];
+    int income_count = 0;
+
     for (int i = 0; i < b_count; ++i) {
         double spent = 0;
         for (int j = 0; j < t_count; ++j) {
@@ -364,12 +389,32 @@ void financial_report_menu() {
                 spent += transactions[j].amount;
             }
         }
-        printf("Category: %-20s | Budget: %10.2lf | Spent: %10.2lf | %s\n",
-            budgets[i].category,
-            budgets[i].budget,
-            spent,
-            (spent > budgets[i].budget) ? "Over Budget!" : "Within Budget"
-        );
+        // Only show in budget vs spending if spent is negative (expense)
+        if (spent < 0) {
+            printf("Category: %-20s | Budget: %10.2lf | Spent: %10.2lf | %s\n",
+                budgets[i].category,
+                budgets[i].budget,
+                spent,
+                (spent < -budgets[i].budget) ? "Over Budget!" : "Within Budget"
+            );
+        } else if (spent > 0) {
+            // Save for income section
+            strncpy(income_categories[income_count], budgets[i].category, CATEGORY_LEN-1);
+            income_categories[income_count][CATEGORY_LEN-1] = '\0';
+            income_amounts[income_count] = spent;
+            income_count++;
+        }
+    }
+
+    // Show income categories (positive total) with no budgets
+    if (income_count > 0) {
+        printf("\nIncome Categories:\n");
+        for (int i = 0; i < income_count; ++i) {
+            printf("Category: %-20s | Earned: %10.2lf\n",
+                income_categories[i],
+                income_amounts[i]
+            );
+        }
     }
 }
 
@@ -421,6 +466,56 @@ int compare_by_category(const void *a, const void *b) {
     return strcmp(t1->category, t2->category);
 }
 
+void selection_sort_by_amount(Transaction *transactions, int count) {
+    for (int i = 0; i < count - 1; ++i) {
+        int min_idx = i;
+        for (int j = i + 1; j < count; ++j) {
+            if (transactions[j].amount < transactions[min_idx].amount)
+                min_idx = j;
+        }
+        if (min_idx != i) {
+            Transaction temp = transactions[i];
+            transactions[i] = transactions[min_idx];
+            transactions[min_idx] = temp;
+        }
+    }
+}
+
+void selection_sort_by_date(Transaction *transactions, int count) {
+    for (int i = 0; i < count - 1; ++i) {
+        int min_idx = i;
+        for (int j = i + 1; j < count; ++j) {
+            Date d1 = transactions[j].date;
+            Date d2 = transactions[min_idx].date;
+            if (d1.year < d2.year ||
+                (d1.year == d2.year && d1.month < d2.month) ||
+                (d1.year == d2.year && d1.month == d2.month && d1.day < d2.day)) {
+                min_idx = j;
+            }
+        }
+        if (min_idx != i) {
+            Transaction temp = transactions[i];
+            transactions[i] = transactions[min_idx];
+            transactions[min_idx] = temp;
+        }
+    }
+}
+
+void selection_sort_by_category(Transaction *transactions, int count) {
+    for (int i = 0; i < count - 1; ++i) {
+        int min_idx = i;
+        for (int j = i + 1; j < count; ++j) {
+            if (strcmp(transactions[j].category, transactions[min_idx].category) < 0)
+                min_idx = j;
+        }
+        if (min_idx != i) {
+            Transaction temp = transactions[i];
+            transactions[i] = transactions[min_idx];
+            transactions[min_idx] = temp;
+        }
+    }
+}
+
 void sort_transactions() {
     Transaction transactions[MAX_TRANSACTIONS];
     int count = read_transactions("Data/transactions.csv", transactions, MAX_TRANSACTIONS);
@@ -444,15 +539,15 @@ void sort_transactions() {
 
     switch (choice) {
         case 1:
-            qsort(transactions, count, sizeof(Transaction), compare_by_amount);
+            selection_sort_by_amount(transactions, count);
             printf("Sorted by amount.\n");
             break;
         case 2:
-            qsort(transactions, count, sizeof(Transaction), compare_by_date);
+            selection_sort_by_date(transactions, count);
             printf("Sorted by date.\n");
             break;
         case 3:
-            qsort(transactions, count, sizeof(Transaction), compare_by_category);
+            selection_sort_by_category(transactions, count);
             printf("Sorted by category.\n");
             break;
         default:
@@ -608,4 +703,19 @@ void search_transactions() {
     if (!found) {
         printf("No transactions found matching your search.\n");
     }
+}
+
+int is_valid_date(int day, int month, int year) {
+    if (year < 1900 || year > 2100) return 0;
+    if (month < 1 || month > 12) return 0;
+    int max_day = 31;
+    if (month == 2) {
+        // Leap year check
+        int leap = (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+        max_day = leap ? 29 : 28;
+    } else if (month == 4 || month == 6 || month == 9 || month == 11) {
+        max_day = 30;
+    }
+    if (day < 1 || day > max_day) return 0;
+    return 1;
 }
