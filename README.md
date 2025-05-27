@@ -26,6 +26,3 @@ After building the project, you can run the application using the following comm
 ```
 ./FinManage
 ```
-
-## Bugs
-- Better Searching
