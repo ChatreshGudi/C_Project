@@ -68,7 +68,7 @@ int main() {
                 financial_report_menu();
                 break;
             case 0:
-                printf("Goodbye!\n");
+                printf("Thank You!\n");
                 exit(0);
             default:
                 printf("Invalid choice. Try again.\n");
@@ -83,7 +83,7 @@ void view_transactions_menu() {
     int choice;
     while (done) {
         printf("\n\n[View Transactions]\n\n");
-        printf("1. Show all transactions in the current month\n");
+        printf("1. Show all transactions\n");
         printf("2. Sort transactions\n");
         printf("3. Group by categories\n");
         printf("4. Search transactions\n");
@@ -153,9 +153,6 @@ void add_transaction_menu() {
     printf("Enter the account name: ");
     fgets(t.account, sizeof(t.account), stdin);
     t.account[strcspn(t.account, "\n")] = 0;
-
-    // Clear buffer before next fgets
-    // clear_input_buffer();
 
     do {
         printf("Enter the category: ");
@@ -283,10 +280,10 @@ void delete_transaction_menu() {
 void display_all_budgets() {
     #define MAX_BUDGETS 100
     #define CATEGORY_LEN 25
-    typedef struct {
-        char category[CATEGORY_LEN];
-        double budget;
-    } Budget;
+    // typedef struct {
+    //     char category[CATEGORY_LEN];
+    //     double budget;
+    // } Budget;
     Budget budgets[MAX_BUDGETS];
     int count = read_budgets("Data/budgets.csv", budgets, MAX_BUDGETS);
 
@@ -361,7 +358,9 @@ void financial_report_menu() {
     printf("Net Balance:     %.2lf\n", total_income + total_expense);
 
     // Budget vs. Spending per category (expenses only)
-    printf("\nBudget vs. Spending by Category (Expenses):\n");
+    printf("\nBudget vs. Spending by Category (Expenses):\n\n");
+    printf("%-20s | %-10s | %-10s | %-15s\n", "Category", "Budget", "Spent", "Status");
+    printf("---------------------|------------|------------|---------------\n");
 
     #define MAX_BUDGETS 100
     #define CATEGORY_LEN 25
@@ -391,7 +390,7 @@ void financial_report_menu() {
         }
         // Only show in budget vs spending if spent is negative (expense)
         if (spent < 0) {
-            printf("Category: %-20s | Budget: %10.2lf | Spent: %10.2lf | %s\n",
+            printf("%-20s | %10.2lf | %10.2lf | %-15s\n",
                 budgets[i].category,
                 budgets[i].budget,
                 spent,
@@ -408,9 +407,11 @@ void financial_report_menu() {
 
     // Show income categories (positive total) with no budgets
     if (income_count > 0) {
-        printf("\nIncome Categories:\n");
+        printf("\nIncome Categories:\n\n");
+        printf("%-20s | %-10s\n", "Category", "Earned");
+        printf("---------------------|------------\n");
         for (int i = 0; i < income_count; ++i) {
-            printf("Category: %-20s | Earned: %10.2lf\n",
+            printf("%-20s | %10.2lf\n",
                 income_categories[i],
                 income_amounts[i]
             );
@@ -442,29 +443,29 @@ void show_all_transactions() {
     }
 }
 
-int compare_by_amount(const void *a, const void *b) {
-    const Transaction *t1 = (const Transaction *)a;
-    const Transaction *t2 = (const Transaction *)b;
-    if (t1->amount < t2->amount) return -1;
-    if (t1->amount > t2->amount) return 1;
-    return 0;
-}
+// int compare_by_amount(const void *a, const void *b) {
+//     const Transaction *t1 = (const Transaction *)a;
+//     const Transaction *t2 = (const Transaction *)b;
+//     if (t1->amount < t2->amount) return -1;
+//     if (t1->amount > t2->amount) return 1;
+//     return 0;
+// }
 
-int compare_by_date(const void *a, const void *b) {
-    const Transaction *t1 = (const Transaction *)a;
-    const Transaction *t2 = (const Transaction *)b;
-    if (t1->date.year != t2->date.year)
-        return t1->date.year - t2->date.year;
-    if (t1->date.month != t2->date.month)
-        return t1->date.month - t2->date.month;
-    return t1->date.day - t2->date.day;
-}
+// int compare_by_date(const void *a, const void *b) {
+//     const Transaction *t1 = (const Transaction *)a;
+//     const Transaction *t2 = (const Transaction *)b;
+//     if (t1->date.year != t2->date.year)
+//         return t1->date.year - t2->date.year;
+//     if (t1->date.month != t2->date.month)
+//         return t1->date.month - t2->date.month;
+//     return t1->date.day - t2->date.day;
+// }
 
-int compare_by_category(const void *a, const void *b) {
-    const Transaction *t1 = (const Transaction *)a;
-    const Transaction *t2 = (const Transaction *)b;
-    return strcmp(t1->category, t2->category);
-}
+// int compare_by_category(const void *a, const void *b) {
+//     const Transaction *t1 = (const Transaction *)a;
+//     const Transaction *t2 = (const Transaction *)b;
+//     return strcmp(t1->category, t2->category);
+// }
 
 void selection_sort_by_amount(Transaction *transactions, int count) {
     for (int i = 0; i < count - 1; ++i) {

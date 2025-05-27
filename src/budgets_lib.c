@@ -93,6 +93,7 @@ void create_new_category() {
 
     char category[CATEGORY_LEN];
     double budget;
+    clear_input_buffer();
     printf("Enter new category name: ");
     fgets(category, sizeof(category), stdin);
     category[strcspn(category, "\n")] = 0;
